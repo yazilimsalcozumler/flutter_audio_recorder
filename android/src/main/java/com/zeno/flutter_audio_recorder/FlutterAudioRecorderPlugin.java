@@ -5,6 +5,7 @@ import android.content.pm.PackageManager;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
+import android.media.audiofx.NoiseSuppressor;
 import android.os.Build.VERSION;
 
 import androidx.core.app.ActivityCompat;
@@ -187,9 +188,12 @@ public class FlutterAudioRecorderPlugin implements MethodCallHandler, PluginRegi
     }
     mRecorder.startRecording();
     mStatus = "recording";
+
     startThread();
     result.success(null);
   }
+
+
 
   private void startThread(){
     mRecordingThread = new Thread(new Runnable() {
@@ -254,9 +258,22 @@ public class FlutterAudioRecorderPlugin implements MethodCallHandler, PluginRegi
   }
 
   private void processAudioStream() {
+    boolean isNoiseSuppressorActive = true;
+//    boolean isNoiseSuppressorActive = false;
+
     Log.d(LOG_NAME, "processing the stream: " + mStatus);
     int size = bufferSize;
     byte bData[] = new byte[size];
+
+    NoiseSuppressor noiseSuppressor = null;
+
+    if(isNoiseSuppressorActive){
+      if(android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN)
+      {
+        noiseSuppressor = NoiseSuppressor.create(mRecorder.getAudioSessionId());
+      Log.d("###", "NoiseSuppressor.isAvailable() " + NoiseSuppressor.isAvailable());
+      }
+    }
 
     while (mStatus == "recording"){
       Log.d(LOG_NAME, "reading audio data");
@@ -269,6 +286,11 @@ public class FlutterAudioRecorderPlugin implements MethodCallHandler, PluginRegi
           e.printStackTrace();
         }
 
+    }
+
+    if(noiseSuppressor != null)
+    {
+      noiseSuppressor.release();
     }
   }
 
